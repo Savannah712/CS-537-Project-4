@@ -20,7 +20,7 @@ Need to Implement 5 calls
 
 # Submission Format
 handin/P4/<your cs login>/
-|---- README.md 
+\n|---- README.md 
 |---- resources.txt
 |---- xv6-public
      | ---- all the contents of xv6 with your modifications
