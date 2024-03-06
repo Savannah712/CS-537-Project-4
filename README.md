@@ -19,11 +19,11 @@ Need to Implement 5 calls
 9. Implement **wremap**.
 
 # Submission Format
-handin/P4/<your cs login>/
-/n|---- README.md 
-|---- resources.txt
-|---- xv6-public
-     | ---- all the contents of xv6 with your modifications
+handin/P4/<your cs login>/\
+|---- README.md\
+|---- resources.txt\
+|---- xv6-public\
+     | ---- all the contents of xv6 with your modifications\
 
 
 
