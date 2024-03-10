@@ -186,52 +186,40 @@ sys_wunmap(void)
     if ((addr % 4096 != 0) || (addr < 0x60000000))
       return FAILED; 
 
-    // int iterations = myproc()->total_mmaps;
 
-      // currAddr = addr + (4096 * j);
-      // pte_t *pte = walkpgdir(myproc()->pgdir, addr, 0);
-      pte_t *pte = walkpgdir(myproc()->pgdir, (char*)PGROUNDDOWN((uint)addr), 1);
-
-      uint pa = PTE_ADDR(*pte);
-      kfree(P2V(pa));
+    myproc()->total_mmaps--;
 
 
-      myproc()->total_mmaps--;
-      // myproc()->addr[tot_maps] = addr;
-      // myproc()->length[tot_maps] = length;
-      // myproc()->n_loaded_pages[tot_maps] = iterations;
-      // myproc()->n_upages = myproc()->n_upages + iterations;
+    int currAddr = addr;
+    int found = 0;
+    int i = 0;
 
-    // int currAddr = addr;
-    // int found = 0;
-    // int i = 0;
+    int pages = 0;
+    while ((found == 0) && (i < MAX_WMMAP_INFO)) {
+      if ((myproc()->vld_map[i] == 1) && myproc()->addr[i] == addr) {
+        found = 1;
+        myproc()->vld_map[i] = 0;
+        int length = myproc()->length[i];
+        pages = (length % 4096 != 0) ? (length / 4096 + 1) : (length / 4096);
+      }
+    }
+    found = 0;
 
-    // while ((found == 0) && (i < iterations)) {
-    //   if (myproc()->addr[i] == addr) {
-    //     found = 1;
-    //   } else {
-    //     i++;
-    //   }
-    // }
+    while ((found == 0) && (i < MAX_UPAGE_INFO)) {
+      if ((myproc()->vld_pge[i] == 1) && myproc()->va[i] == addr) {
+        found = 1;
+        for (int j = 0; j < pages; j++) {
+            currAddr = myproc()->va[i];
+            myproc()->vld_pge[i] = 0;
+            myproc()->n_upages--;
+            pte_t *pte = walkpgdir(myproc()->pgdir, (char*)PGROUNDDOWN((uint)currAddr), 1);
+            uint pa = PTE_ADDR(*pte);
+            kfree(P2V(pa));
+        }
 
-    // int map_length = myproc()->length[i];
+      }
+    }
 
-    // for (int j = 0; j < map_length; j++) {
-    //   currAddr = addr + (4096 * j);
-    //   // pte_t *pte = walkpgdir(myproc()->pgdir, currAddr, 0);
-    //   pte_t *pte = walkpgdir(myproc()->pgdir, (char*)PGROUNDDOWN((uint)currAddr), 1);
-
-    //   uint pa = PTE_ADDR(*pte);
-    //   kfree(P2V(pa));
-    // }
-
-
-    // pte_t *pte = walkpgdir(myproc()->pgdir, addr, 0);
-
-    // char * pa = PTE_ADDR(*pte);
-    // kfree(P2V(pa));
-
-    // Your implementation here
     return SUCCESS;
 }
 
