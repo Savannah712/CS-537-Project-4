@@ -103,22 +103,23 @@ sys_wmap(void)
     int fd;
 
     if (argint(0, &addr) < 0 || argint(1, &length) < 0 || argint(2, &flags) < 0 || argint(3, &fd) < 0)
-        return 1;
+        return FAILED;
         
     pte_t *pte;
     int found = 0;
     int count = 0;
 
-    int tot = myproc()->total_mmaps;
+    int tot_maps = myproc()->total_mmaps;
+    int tot_upge = myproc()->n_upages;
 
-    if ((tot > 0) && ((flags & MAP_FIXED) != MAP_FIXED)) {
-
+    // UNFIXED mapping
+    if ((tot_maps > 0) && ((flags & MAP_FIXED) != MAP_FIXED)) {
       while (found == 0){
-        addr = 0x60000000 + (4096 * count);
-        pte = walkpgdir(myproc()->pgdir, (char*)PGROUNDDOWN((uint)addr), 1);
-        if (*pte & PTE_P) count++;
-        else found = 1;
-      }
+          addr = 0x60000000 + (4096 * count);
+          pte = walkpgdir(myproc()->pgdir, (char*)PGROUNDDOWN((uint)addr), 1);
+          if (*pte & PTE_P) count++;
+          else found = 1;
+        }
     }
 
     int iterations = (length / 4096);
@@ -126,41 +127,179 @@ sys_wmap(void)
       iterations++;
     }
     int currAddr = addr;
-
     char *mem;
-
-    // if (length == 8200) return iterations;
     
     for (int i = 0; i < iterations; i++) {
       pte = walkpgdir(myproc()->pgdir, (char*)PGROUNDDOWN((uint)currAddr), 1);
       if (*pte & PTE_P) return FAILED;
-      // for (int j = 0; j < myproc()->total_mmaps ; j++) {
-      //   for (int k = 0; k < myproc()->length[j]; k++){
-      //     if ((myproc()->addr[j] + (4096 * j)) == currAddr) return FAILED;
-      //     // if (length == 12296) return 
-      //   }
-      // }
+
       mem = kalloc();
       mappages(myproc()->pgdir, (void*)currAddr, 4096, V2P(mem), PTE_W | PTE_U);
+      myproc()->va[tot_upge + i] = currAddr;
+      myproc()->pa[tot_upge + i] = V2P(mem);
+      myproc()->vld_pge[tot_upge + i] = 1;
+
+
+      if ((flags & MAP_ANONYMOUS) == 0) { 
+        // Read the file into memory
+        struct file *f = myproc()->ofile[fd];
+         fileread(f, (void*)currAddr, 4096);
+        // if (bytes_read != length) {
+        //     kfree(mem);
+        //     return bytes_read; // Failed to read the file into memory
+        // }
+      }   
+
       currAddr = currAddr + 4096;
 
 
     }
 
-    // walkpgdir(myproc()->pgdir, (void *)(addr), 0);
 
-    // Update process's memory mappings
-    // myproc()->num_mappings++;
+
     myproc()->total_mmaps++;
-    myproc()->addr[tot] = addr;
-    myproc()->length[tot] = length;
-    myproc()->n_loaded_pages[tot] = iterations;
+    int i = 0;
+    while (myproc()->vld_map[i] == 1) {
+      i++;
+    }
+    myproc()->addr[i] = addr;
+    myproc()->vld_map[i] = 1;
+    myproc()->length[i] = length;
+    myproc()->n_loaded_pages[i] = iterations;
     myproc()->n_upages = myproc()->n_upages + iterations;
 
     // Return the mapped address
 
     return addr;
-    
+  }
+
+
+
+int
+sys_wunmap(void)
+{
+    int addr;
+
+    if (argint(0, &addr) < 0)
+      return FAILED;
+
+    if ((addr % 4096 != 0) || (addr < 0x60000000))
+      return FAILED; 
+
+    // int iterations = myproc()->total_mmaps;
+
+      // currAddr = addr + (4096 * j);
+      // pte_t *pte = walkpgdir(myproc()->pgdir, addr, 0);
+      pte_t *pte = walkpgdir(myproc()->pgdir, (char*)PGROUNDDOWN((uint)addr), 1);
+
+      uint pa = PTE_ADDR(*pte);
+      kfree(P2V(pa));
+
+
+      myproc()->total_mmaps--;
+      // myproc()->addr[tot_maps] = addr;
+      // myproc()->length[tot_maps] = length;
+      // myproc()->n_loaded_pages[tot_maps] = iterations;
+      // myproc()->n_upages = myproc()->n_upages + iterations;
+
+    // int currAddr = addr;
+    // int found = 0;
+    // int i = 0;
+
+    // while ((found == 0) && (i < iterations)) {
+    //   if (myproc()->addr[i] == addr) {
+    //     found = 1;
+    //   } else {
+    //     i++;
+    //   }
+    // }
+
+    // int map_length = myproc()->length[i];
+
+    // for (int j = 0; j < map_length; j++) {
+    //   currAddr = addr + (4096 * j);
+    //   // pte_t *pte = walkpgdir(myproc()->pgdir, currAddr, 0);
+    //   pte_t *pte = walkpgdir(myproc()->pgdir, (char*)PGROUNDDOWN((uint)currAddr), 1);
+
+    //   uint pa = PTE_ADDR(*pte);
+    //   kfree(P2V(pa));
+    // }
+
+
+    // pte_t *pte = walkpgdir(myproc()->pgdir, addr, 0);
+
+    // char * pa = PTE_ADDR(*pte);
+    // kfree(P2V(pa));
+
+    // Your implementation here
+    return SUCCESS;
+}
+
+int
+sys_wremap(void)
+{
+    // uint oldaddr;
+    // int oldsize;
+    // int newsize;
+    // int flags;
+    // Your implementation here
+    return 0;
+}
+
+int
+sys_getpgdirinfo(void)
+{
+    struct pgdirinfo *pdinfo;
+
+
+    if (argptr(0, (void *)&pdinfo, sizeof(struct pgdirinfo)) < 0)
+        return FAILED; // Invalid pointer
+
+    int tot = myproc()->n_upages;
+    pdinfo->n_upages = tot;
+    int currPge = 0;
+    int i = 0;
+    while ((currPge <= tot)){
+    // for (int i = 0; i < MAX_UPAGE_INFO; i++) {
+      if (myproc()->vld_pge[i] == 1) {
+        pdinfo->va[currPge] = myproc()->va[i];
+        pdinfo->pa[currPge] = myproc()->pa[i];
+        currPge++;
+        }
+        i++;
+    }
+
+    return SUCCESS;
+}
+
+
+
+int
+sys_getwmapinfo(void)
+{
+    struct wmapinfo *wminfo;
+    if (argptr(0, (void *)&wminfo, sizeof(*wminfo)) < 0)
+    return -1;
+
+    int tot = myproc()->total_mmaps;
+    wminfo->total_mmaps = tot;
+    int currMap = 0;
+    int i = 0;
+
+    while ((currMap <= tot)) {
+    // for (int i = 0; i < MAX_WMMAP_INFO; i++) {
+      if(myproc()->vld_map[i] == 1) {
+        wminfo->addr[currMap] = myproc()->addr[i];
+        wminfo->length[currMap] = myproc()->length[i];
+        wminfo->n_loaded_pages[currMap] = myproc()->n_loaded_pages[i];
+        currMap++;
+      }
+      i++;
+    }
+    return 0;
+}
+
+
 
     // Check if the requested flags are valid
     // if ((flags & (MAP_ANONYMOUS | MAP_FIXED | MAP_SHARED)) != (MAP_ANONYMOUS | MAP_FIXED | MAP_SHARED))
@@ -251,80 +390,3 @@ sys_wmap(void)
 
 
     // return addr;
-  }
-
-
-
-int
-sys_wunmap(void)
-{
-    // uint addr;
-    // Your implementation here
-    return 0;
-}
-
-int
-sys_wremap(void)
-{
-    // uint oldaddr;
-    // int oldsize;
-    // int newsize;
-    // int flags;
-    // Your implementation here
-    return 0;
-}
-
-int
-sys_getpgdirinfo(void)
-{
-    struct pgdirinfo *pdinfo;
-
-
-    if (argptr(0, (void *)&pdinfo, sizeof(struct pgdirinfo)) < 0)
-        return FAILED; // Invalid pointer
-
-    struct proc *curproc = myproc();
-    if (curproc == 0)
-        return FAILED; // No current process
-
-    pdinfo->n_upages = 0; // Initialize the count of user pages
-
-    // Iterate over the page directory and page tables
-    int idx = 0; // Index for storing virtual and physical addresses
-    for (int i = 0; i < NPDENTRIES && idx < MAX_UPAGE_INFO; i++) {
-        pde_t *pgtab = (pde_t *)P2V(PTE_ADDR(curproc->pgdir[i]));
-        for (int j = 0; j < NPTENTRIES && idx < MAX_UPAGE_INFO; j++) {
-            pte_t pte = pgtab[j];
-            if (pte & PTE_P && pte & PTE_U) { // If page is present and user accessible
-                pdinfo->va[idx] = PGADDR(i, j, 0); // Store virtual address
-                pdinfo->pa[idx] = PTE_ADDR(pte);   // Store physical address
-                pdinfo->n_upages++;                // Increment count of user pages
-                idx++;                             // Increment index
-            }
-        }
-    }
-
-    return SUCCESS;
-}
-
-
-
-int
-sys_getwmapinfo(void)
-{
-    struct wmapinfo *wminfo;
-    if (argptr(0, (void *)&wminfo, sizeof(*wminfo)) < 0)
-    return -1;
-
-    int tot = myproc()->total_mmaps;
-    wminfo->total_mmaps = tot;
-    
-    for (int i = 0; i < tot; i++) {
-    wminfo->addr[i] = myproc()->addr[i];
-    wminfo->length[i] = myproc()->length[i];
-    wminfo->n_loaded_pages[i] = myproc()->n_loaded_pages[i];
-    }
-  
-
-    return 0;
-}

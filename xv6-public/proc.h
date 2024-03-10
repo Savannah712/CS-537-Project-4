@@ -61,10 +61,12 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
   int total_mmaps;                    // Total number of wmap regions
+  int vld_map[MAX_WMMAP_INFO];           // Starting address of mapping
   int addr[MAX_WMMAP_INFO];           // Starting address of mapping
   int length[MAX_WMMAP_INFO];         // Size of mapping
   int n_loaded_pages[MAX_WMMAP_INFO]; // Number of pages physically loaded into memory
   uint n_upages;           // the number of allocated physical pages in the process's user address space
+  int vld_pge[MAX_UPAGE_INFO];           // Starting address of mapping
   uint va[MAX_UPAGE_INFO]; // the virtual addresses of the allocated physical pages in the process's user address space
   uint pa[MAX_UPAGE_INFO]; // the physical addresses of the allocated physical pages in the process's user address space
 };
