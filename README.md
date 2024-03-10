@@ -17,3 +17,13 @@ Need to Implement 5 calls
 7. Go for fork() and exit(). Copy mappings from parent to child across the fork() system call. Also, make sure you remove all mappings in exit().
 8. Implement MAP_PRIVATE. You'll need to change 'fork()' to behave differently if the mapping is private. Also, you'll need to revisit 'wunmap' and make sure changes are NOT reflected in the underlying file with MAP_PRIVATE set.
 9. Implement **wremap**.
+
+# Submission Format
+handin/P4/<your cs login>/\
+|---- README.md\
+|---- resources.txt\
+|---- xv6-public\
+     | ---- all the contents of xv6 with your modifications\
+
+
+
