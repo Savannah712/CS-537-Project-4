@@ -32,7 +32,18 @@ struct context {
   uint eip;
 };
 
+
+// // TODO: added
+// struct memregion {
+//     uint addr;        // Starting address of the memory region
+//     uint length;      // Length of the memory region
+//     uint num_pages;   // Number of loaded pages in the memory region
+// };
+
+
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+#define MAX_WMMAP_INFO 16
+#define MAX_UPAGE_INFO 32
 
 // Per-process state
 struct proc {
@@ -49,7 +60,15 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  int total_mmaps;                    // Total number of wmap regions
+  int addr[MAX_WMMAP_INFO];           // Starting address of mapping
+  int length[MAX_WMMAP_INFO];         // Size of mapping
+  int n_loaded_pages[MAX_WMMAP_INFO]; // Number of pages physically loaded into memory
+  uint n_upages;           // the number of allocated physical pages in the process's user address space
+  uint va[MAX_UPAGE_INFO]; // the virtual addresses of the allocated physical pages in the process's user address space
+  uint pa[MAX_UPAGE_INFO]; // the physical addresses of the allocated physical pages in the process's user address space
 };
+
 
 // Process memory is laid out contiguously, low addresses first:
 //   text

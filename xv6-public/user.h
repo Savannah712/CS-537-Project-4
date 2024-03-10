@@ -1,5 +1,8 @@
+// #include "wmap.h"
 struct stat;
 struct rtcdate;
+struct pgdirinfo;
+struct wmapinfo;
 
 // system calls
 int fork(void);
@@ -23,6 +26,12 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+uint wmap(int addr, int length, int flags, int fd);                // TODO: added
+int wunmap(uint addr);                                              // TODO: added
+uint wremap(uint oldaddr, int oldsize, int newsize, int flags);     // TODO: added
+int getpgdirinfo(struct pgdirinfo *);                               // TODO: added
+int getwmapinfo(struct wmapinfo *);                                 // TODO: added
+
 
 // ulib.c
 int stat(const char*, struct stat*);

@@ -20,3 +20,9 @@
 #define SYS_link   19
 #define SYS_mkdir  20
 #define SYS_close  21
+#define SYS_wmap            22 // TODO: added
+#define SYS_wunmap          23 // TODO: added
+#define SYS_wremap          24 // TODO: added
+#define SYS_getpgdirinfo    25 // TODO: added
+#define SYS_getwmapinfo     26 // TODO: added
+
