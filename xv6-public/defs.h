@@ -33,6 +33,7 @@ void            fileinit(void);
 int             fileread(struct file*, char*, int n);
 int             filestat(struct file*, struct stat*);
 int             filewrite(struct file*, char*, int n);
+int changeOffset(struct file *f, int off);
 
 // fs.c
 void            readsb(int dev, struct superblock *sb);
@@ -193,6 +194,7 @@ int             mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm);
 int find_addr(int length);
 int fill_table(int currAddr);
 int map(int addr, int length, int flags, int fd);
+int unmap(int addr);
 
 
 // number of elements in fixed-size array

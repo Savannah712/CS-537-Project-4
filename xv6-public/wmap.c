@@ -7,7 +7,7 @@
 #include "mmu.h"
 #include "proc.h"
 #include "wmap.h"
-
+// #include "file.h"
 
 int check_overlap(int addr, int length) {
     int currAddr;
@@ -154,8 +154,6 @@ int fill_table(int currAddr) {
       myproc()->n_loaded_pages[index]++;
     }
 
-    
-
   return SUCCESS;
 }
 
@@ -191,15 +189,9 @@ int map(int addr, int length, int flags, int fd) {
       if (check_overlap(addr, temp_length) == 1) return FAILED;
     }
 
-
     // int ret;
-
-
-
     // ret = fill_table(currAddr, iterations, length, flags, fd, tot_upge);
     // if (ret == -1) return FAILED;
-
-
 
     myproc()->total_mmaps++;
     int i = 0;
@@ -219,4 +211,75 @@ int map(int addr, int length, int flags, int fd) {
     // Return the mapped address
 
     return currAddr;
+}
+
+
+
+int unmap (int addr) {
+  
+    if ((addr % 4096 != 0) || (addr < 0x60000000))
+      return FAILED; 
+
+
+
+    myproc()->total_mmaps--;
+
+    int currAddr = addr;
+    cprintf("this is what was passed: %x\n", addr);
+    int found = 0;
+    int i = 0;
+    int fd = 0;
+    int length;
+    int flags = 0;
+    struct file *f;
+
+    int pages = 0;
+    while ((found == 0) && (i < MAX_WMMAP_INFO)) {
+      if ((myproc()->vld_map[i] == 1) && myproc()->addr[i] == addr) {
+        found = 1;
+        myproc()->vld_map[i] = 0;
+        length = myproc()->length[i];
+        flags = myproc()->flags[i];
+        fd = myproc()->fd[i];
+        pages = (length % 4096 != 0) ? (length / 4096 + 1) : (length / 4096);
+      }
+      i++;
+    }
+    found = 0;
+    i = 0;
+
+    while ((found == 0) && (i < MAX_UPAGE_INFO)) {
+      cprintf("curr i: %d VA: %x\n", i, (myproc()->va[i]));
+      if ((myproc()->vld_pge[i] == 1) && myproc()->va[i] == addr) {
+        found = 1;
+        currAddr = myproc()->va[i];
+
+        for (int j = 0; j < pages; j++) {
+            cprintf("curr VA: %x\n", currAddr);
+            cprintf("fd %d  and flags = %x\n", fd, flags);
+
+            if ((flags & MAP_SHARED) != 0) {
+                cprintf("hello!! fd %d  and flags = %x\n", fd, flags);
+                // Write the modified contents back to the file
+                f = myproc()->ofile[fd];
+                changeOffset(f, 0);
+                filewrite(f, (void*)currAddr, 4096);
+                
+              }
+
+            myproc()->vld_pge[i] = 0;
+            myproc()->n_upages--;
+            pte_t *pte = walkpgdir(myproc()->pgdir, (char*)PGROUNDDOWN((uint)currAddr), 0);
+            uint pa = PTE_ADDR(*pte);
+            *pte = 0;
+            kfree(P2V(pa));
+
+          currAddr = currAddr + 4096;
+        }
+      }
+      i++;
+    }
+
+
+    return SUCCESS;
 }

@@ -206,61 +206,6 @@ sys_wmap(void)
 
   }
 
-int unmap (int addr) {
-  
-    if ((addr % 4096 != 0) || (addr < 0x60000000))
-      return FAILED; 
-
-
-
-    myproc()->total_mmaps--;
-
-
-    int currAddr = addr;
-    cprintf("this is what was passed: %x\n", addr);
-    int found = 0;
-    int i = 0;
-
-    int pages = 0;
-    while ((found == 0) && (i < MAX_WMMAP_INFO)) {
-      if ((myproc()->vld_map[i] == 1) && myproc()->addr[i] == addr) {
-        found = 1;
-        myproc()->vld_map[i] = 0;
-        int length = myproc()->length[i];
-        pages = (length % 4096 != 0) ? (length / 4096 + 1) : (length / 4096);
-      }
-      i++;
-    }
-    found = 0;
-    i = 0;
-
-    while ((found == 0) && (i < MAX_UPAGE_INFO)) {
-      cprintf("curr i: %d VA: %x\n", i, (myproc()->va[i]));
-      if ((myproc()->vld_pge[i] == 1) && myproc()->va[i] == addr) {
-        found = 1;
-        currAddr = myproc()->va[i];
-
-        for (int j = 0; j < pages; j++) {
-            cprintf("curr VA: %x\n", currAddr);
-            myproc()->vld_pge[i] = 0;
-            myproc()->n_upages--;
-            pte_t *pte = walkpgdir(myproc()->pgdir, (char*)PGROUNDDOWN((uint)currAddr), 0);
-            uint pa = PTE_ADDR(*pte);
-            *pte = 0;
-            kfree(P2V(pa));
-
-          currAddr = currAddr + 4096;
-
-        }
-
-      }
-      i++;
-    }
-
-
-    return SUCCESS;
-}
-
 
 int
 sys_wunmap(void)
