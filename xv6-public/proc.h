@@ -62,6 +62,8 @@ struct proc {
   char name[16];               // Process name (debugging)
   int total_mmaps;                    // Total number of wmap regions
   int vld_map[MAX_WMMAP_INFO];           // Starting address of mapping
+  int flags[MAX_WMMAP_INFO];           // Starting address of mapping
+  int fd[MAX_WMMAP_INFO];
   int addr[MAX_WMMAP_INFO];           // Starting address of mapping
   int length[MAX_WMMAP_INFO];         // Size of mapping
   int n_loaded_pages[MAX_WMMAP_INFO]; // Number of pages physically loaded into memory

@@ -188,6 +188,12 @@ void            clearpteu(pde_t *pgdir, char *uva);
 pte_t*         walkpgdir(pde_t *pgdir, const void *va, int alloc);
 int             mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm);
 
+//TODO: ADDED
+// wmap.c
+int find_addr(int length);
+int fill_table(int currAddr);
+int map(int addr, int length, int flags, int fd);
+
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

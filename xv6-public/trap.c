@@ -7,6 +7,7 @@
 #include "x86.h"
 #include "traps.h"
 #include "spinlock.h"
+#include "wmap.h"
 
 // Interrupt descriptor table (shared by all CPUs).
 struct gatedesc idt[256];
@@ -78,9 +79,14 @@ trap(struct trapframe *tf)
     lapiceoi();
     break;
     case T_PGFLT: // T_PGFLT = 14   TODO: do something
-      // if page fault addr is part of a mapping: // lazy allocation
+      // cprintf("Segmentation Fault %d\n", addr);
 
-      // else:
+      uint addr = rcr2();
+      int result = fill_table(addr);
+      // int result = -1;
+      // if page fault addr is part of a mapping: // lazy allocation
+      
+      if (result == -1)
           cprintf("Segmentation Fault\n");
           // kill the process
     break;
