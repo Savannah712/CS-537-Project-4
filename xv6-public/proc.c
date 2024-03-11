@@ -215,6 +215,26 @@ fork(void)
 
   acquire(&ptable.lock);
 
+  // TODO: COPY WHAT WAS ADDED
+  np-> total_mmaps = curproc->total_mmaps;    
+  for (int i = 0; i < MAX_WMMAP_INFO ; i++) {
+    np-> vld_map[i] = curproc->vld_map[i]; 
+    np-> flags[i] = curproc->flags[i]; 
+    np-> fd[i] = curproc->fd[i]; 
+    np-> addr[i] = curproc->addr[i]; 
+    np-> length[i] = curproc->length[i]; 
+    np-> n_loaded_pages[i] = curproc->n_loaded_pages[i]; 
+  }                
+
+  np-> n_upages = curproc->n_upages; 
+  for (int i = 0; i < MAX_WMMAP_INFO ; i++) {
+    np-> vld_pge[i] = curproc->vld_pge[i]; 
+    np-> va[i] = curproc->va[i]; 
+    np-> pa[i] = curproc->pa[i]; 
+
+  }                   
+  /////////////////////////
+
   np->state = RUNNABLE;
 
   release(&ptable.lock);

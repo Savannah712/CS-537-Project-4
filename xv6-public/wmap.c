@@ -18,7 +18,6 @@ int check_overlap(int addr, int length) {
         if (myproc()->vld_map[i] == 1) {
             currAddr = myproc()->addr[i];
             // if (currAddr <= addr) {
-              // cprintf("comparing %x with %x\n", currAddr, addr);
                 int mapLength = myproc()->length[i];
                 pages = (mapLength % PGSIZE == 0) ? (mapLength / PGSIZE) : ((mapLength / PGSIZE) + 1);
                 for (int j = 0; j < pages; j++) {
@@ -53,8 +52,6 @@ int find_addr(int length) {
               int temp_PageNum = (temp_length % PGSIZE == 0) ? (temp_length / PGSIZE) : ((temp_length / PGSIZE) + 1);
               int temp_lower_bound = myproc()->addr[temp];
               int temp_upper_bound = temp_lower_bound + (PGSIZE * temp_PageNum);
-          //     cprintf("lower bound: %x, upper bound: %x, length:%d\n", lower_bound, upper_bound, length);
-          // cprintf("comp with: lower bound: %x, upper bound: %x, length:%d\n", temp_lower_bound, temp_upper_bound, temp_length);
               if (new_PageNum >= temp_PageNum) {
                 if (((temp_upper_bound > lower_bound) && (temp_upper_bound <= upper_bound)) ||
                     ((temp_lower_bound >= lower_bound) && (temp_lower_bound < upper_bound))) {
@@ -120,19 +117,17 @@ int fill_table(int currAddr) {
     index = find_index(currAddr);
     // cprintf("Addr: %x, i here %d\n",  currAddr, index);
     if (index == FAILED) return FAILED;
-    // currAddr = myproc()->addr[index];
+    int offset = currAddr - myproc()->addr[index];
     int fd = myproc()->fd[index];
     int flags = myproc()->flags[index];
-    int length = myproc()->length[index];
-    int pages = (length % 4096 == 0) ? (length / 4096) : ((length / 4096) + 1);
+    // int length = myproc()->length[index];
+    // int pages = (length % 4096 == 0) ? (length / 4096) : ((length / 4096) + 1);
     int upage = 0;
-    while (myproc()->vld_pge[upage] == 1) {
+    while ((myproc()->vld_pge[upage] == 1) && (upage < MAX_UPAGE_INFO)) {
       upage++;
     }
-    // cprintf("found length here %d, num pages is %d, user index is %d\n", length, pages, upage);
-    // cprintf("found flags are %x, fd is %d\n", flags , fd);
 
-    for (int i = 0; i < pages; i++) {
+    // for (int i = 0; i < pages; i++) {
       pte = walkpgdir(myproc()->pgdir, (char*)PGROUNDDOWN((uint)currAddr), 1);
       if (*pte & PTE_P) return FAILED;
       // if (check_overlap(currAddr, length)) return FAILED;
@@ -140,30 +135,30 @@ int fill_table(int currAddr) {
       mem = kalloc();
       memset(mem, 0, PGSIZE);
       mappages(myproc()->pgdir, (void*)currAddr, 4096, V2P(mem), PTE_W | PTE_U);
-      myproc()->va[upage+i] = currAddr;
-      myproc()->pa[upage+i] = V2P(mem);
-      myproc()->vld_pge[upage+i] = 1;
+      if(upage != MAX_UPAGE_INFO) {
+      myproc()->va[upage] = currAddr;
+      myproc()->pa[upage] = V2P(mem);
+      myproc()->vld_pge[upage] = 1;
+      }
       
 
       if ((flags & MAP_ANONYMOUS) == 0) { 
+        // cprintf("curr offset %d\n",offset);
         // Read the file into memory
         struct file *f = myproc()->ofile[fd];
+        changeOffset(f, offset );
         fileread(f, (void*)currAddr, 4096);
       } 
       currAddr = currAddr + 4096;
       myproc()->n_loaded_pages[index]++;
-    }
+    // }
 
   return SUCCESS;
 }
 
 int map(int addr, int length, int flags, int fd) {
-    // pte_t *pte;
-    // int found = 0;
-    // int count = 0;
 
     int tot_maps = myproc()->total_mmaps;
-    // int tot_upge = myproc()->n_upages;
 
     int iterations = (length / 4096);
     if (length % 4096 != 0) {
@@ -171,40 +166,25 @@ int map(int addr, int length, int flags, int fd) {
     }
     int currAddr = addr;
     int temp_length = length;
-    cprintf("fd in waaas: %x\n", fd);
 
     // UNFIXED mapping
     if ((tot_maps > 0) && ((flags & MAP_FIXED) != MAP_FIXED)) {
-      // while (found == 0){
-      //     if (check_overlap(0x60000000) == 1) count++;
-      //     addr = 0x60000000 + (4096 * count);
-      //     pte = walkpgdir(myproc()->pgdir, (char*)PGROUNDDOWN((uint)addr), 1);
-      //     if (*pte & PTE_P) count++;
-      //     else found = 1;
-      //   }
-      cprintf("how about here\n");
+
       currAddr = find_addr(temp_length);
-      // cprintf("here addr is:%x and then we found: currAddr %x \n", addr, currAddr);
     } else {
       if (check_overlap(addr, temp_length) == 1) return FAILED;
     }
-
-    // int ret;
-    // ret = fill_table(currAddr, iterations, length, flags, fd, tot_upge);
-    // if (ret == -1) return FAILED;
 
     myproc()->total_mmaps++;
     int i = 0;
     while (myproc()->vld_map[i] == 1) {
       i++;
     }
-    // cprintf("here addr is: %x and curr is: %x\n", addr, currAddr);
     myproc()->addr[i] = currAddr;
     myproc()->flags[i] = flags;
     myproc()->fd[i] = fd;
     myproc()->vld_map[i] = 1;
     myproc()->length[i] = length;
-    cprintf("and we loaded this %x with length: %d\n", myproc()->addr[i], myproc()->length[i]);
     
     // myproc()->n_upages = myproc()->n_upages + iterations;
 
@@ -225,7 +205,7 @@ int unmap (int addr) {
     myproc()->total_mmaps--;
 
     int currAddr = addr;
-    cprintf("this is what was passed: %x\n", addr);
+
     int found = 0;
     int i = 0;
     int fd = 0;
@@ -249,20 +229,26 @@ int unmap (int addr) {
     i = 0;
 
     while ((found == 0) && (i < MAX_UPAGE_INFO)) {
-      cprintf("curr i: %d VA: %x\n", i, (myproc()->va[i]));
+
       if ((myproc()->vld_pge[i] == 1) && myproc()->va[i] == addr) {
         found = 1;
         currAddr = myproc()->va[i];
 
-        for (int j = 0; j < pages; j++) {
-            cprintf("curr VA: %x\n", currAddr);
-            cprintf("fd %d  and flags = %x\n", fd, flags);
-
-            if ((flags & MAP_SHARED) != 0) {
-                cprintf("hello!! fd %d  and flags = %x\n", fd, flags);
+              if ((flags & MAP_SHARED) != 0) {
                 // Write the modified contents back to the file
+                
                 f = myproc()->ofile[fd];
                 changeOffset(f, 0);
+                
+              }
+
+
+        for (int j = 0; j < pages; j++) {
+
+
+            if ((flags & MAP_SHARED) != 0) {
+                // Write the modified contents back to the file
+                // f = myproc()->ofile[fd];
                 filewrite(f, (void*)currAddr, 4096);
                 
               }

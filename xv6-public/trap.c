@@ -77,19 +77,20 @@ trap(struct trapframe *tf)
     cprintf("cpu%d: spurious interrupt at %x:%x\n",
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
-    break;
-    case T_PGFLT: // T_PGFLT = 14   TODO: do something
-      // cprintf("Segmentation Fault %d\n", addr);
+  break;
+  case T_PGFLT: // T_PGFLT = 14   TODO: do something
+    // cprintf("Segmentation Fault %d\n", addr);
 
-      uint addr = rcr2();
-      int result = fill_table(addr);
-      // int result = -1;
-      // if page fault addr is part of a mapping: // lazy allocation
-      
-      if (result == -1)
-          cprintf("Segmentation Fault\n");
-          // kill the process
-    break;
+    uint addr = rcr2();
+    // cprintf("Seg fault for: %d\n", addr);
+    int result = fill_table(addr);
+    // int result = -1;
+    // if page fault addr is part of a mapping: // lazy allocation
+    
+    if (result == -1)
+        cprintf("Segmentation Fault\n");
+        // kill the process
+  break;
 
 
   //PAGEBREAK: 13
