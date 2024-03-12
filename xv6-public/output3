@@ -15,15 +15,15 @@ objdump -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$/d' > kernel.sym
 dd if=/dev/zero of=xv6.img count=10000
 10000+0 records in
 10000+0 records out
-5120000 bytes (5.1 MB, 4.9 MiB) copied, 0.0110053 s, 465 MB/s
+5120000 bytes (5.1 MB, 4.9 MiB) copied, 0.0100562 s, 509 MB/s
 dd if=bootblock of=xv6.img conv=notrunc
 1+0 records in
 1+0 records out
-512 bytes copied, 0.000132361 s, 3.9 MB/s
+512 bytes copied, 9.9092e-05 s, 5.2 MB/s
 dd if=kernel of=xv6.img seek=1 conv=notrunc
 441+1 records in
 441+1 records out
-225936 bytes (226 kB, 221 KiB) copied, 0.000429878 s, 526 MB/s
+225936 bytes (226 kB, 221 KiB) copied, 0.00041833 s, 540 MB/s
 make: 'fs.img' is up to date.
 
 
@@ -39,11 +39,11 @@ Remaps an anonymous mapping (grow, but does not need to move)
 
 **********************************************************************
 Running xv6 user progam /home/cs537-1/tests/P4/5_wremap_tests/test_29.c
-DEBUG: cmd = ['/home/cs537-1/tests/P4/edit-makefile.sh', '/tmp/tmpnrjs_nm5/p/Makefile', '/tmp/tmpnrjs_nm5/p/Makefile.test']
+DEBUG: cmd = ['/home/cs537-1/tests/P4/edit-makefile.sh', '/tmp/tmpzscnx6po/p/Makefile', '/tmp/tmpzscnx6po/p/Makefile.test']
 Trying to build project using make
 make xv6.img fs.img
-/tmp/tmpnrjs_nm5/p/Makefile
-/tmp/tmpnrjs_nm5/p/Makefile.test
+/tmp/tmpzscnx6po/p/Makefile
+/tmp/tmpzscnx6po/p/Makefile.test
 make: 'xv6.img' is up to date.
 make: 'fs.img' is up to date.
 make qemu-nox CPUS=1
@@ -91,11 +91,11 @@ Remaps an anonymous mapping (shrink twice)
 
 **********************************************************************
 Running xv6 user progam /home/cs537-1/tests/P4/5_wremap_tests/test_30.c
-DEBUG: cmd = ['/home/cs537-1/tests/P4/edit-makefile.sh', '/tmp/tmpnrjs_nm5/p/Makefile', '/tmp/tmpnrjs_nm5/p/Makefile.test']
+DEBUG: cmd = ['/home/cs537-1/tests/P4/edit-makefile.sh', '/tmp/tmpzscnx6po/p/Makefile', '/tmp/tmpzscnx6po/p/Makefile.test']
 Trying to build project using make
 make xv6.img fs.img
-/tmp/tmpnrjs_nm5/p/Makefile
-/tmp/tmpnrjs_nm5/p/Makefile.test
+/tmp/tmpzscnx6po/p/Makefile
+/tmp/tmpzscnx6po/p/Makefile.test
 make: 'xv6.img' is up to date.
 make: 'fs.img' is up to date.
 make qemu-nox CPUS=1
@@ -130,6 +130,7 @@ Map 1 shrunk to 0x60021000 (length 0x6000). 	Okay
 
 WMMAP	 SUCCESS
 
+
 test test_30 PASSED (1 of 1)
  (Remaps an anonymous mapping (shrink twice))
 
@@ -142,11 +143,11 @@ Remaps an anonymous mapping that needs to be moved
 
 **********************************************************************
 Running xv6 user progam /home/cs537-1/tests/P4/5_wremap_tests/test_31.c
-DEBUG: cmd = ['/home/cs537-1/tests/P4/edit-makefile.sh', '/tmp/tmpnrjs_nm5/p/Makefile', '/tmp/tmpnrjs_nm5/p/Makefile.test']
+DEBUG: cmd = ['/home/cs537-1/tests/P4/edit-makefile.sh', '/tmp/tmpzscnx6po/p/Makefile', '/tmp/tmpzscnx6po/p/Makefile.test']
 Trying to build project using make
 make xv6.img fs.img
-/tmp/tmpnrjs_nm5/p/Makefile
-/tmp/tmpnrjs_nm5/p/Makefile.test
+/tmp/tmpzscnx6po/p/Makefile
+/tmp/tmpzscnx6po/p/Makefile.test
 make: 'xv6.img' is up to date.
 make: 'fs.img' is up to date.
 make qemu-nox CPUS=1
@@ -196,11 +197,11 @@ Validates memory access in a map that is shrinked
 
 **********************************************************************
 Running xv6 user progam /home/cs537-1/tests/P4/5_wremap_tests/test_32.c
-DEBUG: cmd = ['/home/cs537-1/tests/P4/edit-makefile.sh', '/tmp/tmpnrjs_nm5/p/Makefile', '/tmp/tmpnrjs_nm5/p/Makefile.test']
+DEBUG: cmd = ['/home/cs537-1/tests/P4/edit-makefile.sh', '/tmp/tmpzscnx6po/p/Makefile', '/tmp/tmpzscnx6po/p/Makefile.test']
 Trying to build project using make
 make xv6.img fs.img
-/tmp/tmpnrjs_nm5/p/Makefile
-/tmp/tmpnrjs_nm5/p/Makefile.test
+/tmp/tmpzscnx6po/p/Makefile
+/tmp/tmpzscnx6po/p/Makefile.test
 make: 'xv6.img' is up to date.
 make: 'fs.img' is up to date.
 make qemu-nox CPUS=1
@@ -250,11 +251,11 @@ Validates memory access in a map that moved due to remap
 
 **********************************************************************
 Running xv6 user progam /home/cs537-1/tests/P4/5_wremap_tests/test_33.c
-DEBUG: cmd = ['/home/cs537-1/tests/P4/edit-makefile.sh', '/tmp/tmpnrjs_nm5/p/Makefile', '/tmp/tmpnrjs_nm5/p/Makefile.test']
+DEBUG: cmd = ['/home/cs537-1/tests/P4/edit-makefile.sh', '/tmp/tmpzscnx6po/p/Makefile', '/tmp/tmpzscnx6po/p/Makefile.test']
 Trying to build project using make
 make xv6.img fs.img
-/tmp/tmpnrjs_nm5/p/Makefile
-/tmp/tmpnrjs_nm5/p/Makefile.test
+/tmp/tmpzscnx6po/p/Makefile
+/tmp/tmpzscnx6po/p/Makefile.test
 make: 'xv6.img' is up to date.
 make: 'fs.img' is up to date.
 make qemu-nox CPUS=1
@@ -311,11 +312,11 @@ Shrinks an anonymous map and then unmaps it
 
 **********************************************************************
 Running xv6 user progam /home/cs537-1/tests/P4/5_wremap_tests/test_34.c
-DEBUG: cmd = ['/home/cs537-1/tests/P4/edit-makefile.sh', '/tmp/tmpnrjs_nm5/p/Makefile', '/tmp/tmpnrjs_nm5/p/Makefile.test']
+DEBUG: cmd = ['/home/cs537-1/tests/P4/edit-makefile.sh', '/tmp/tmpzscnx6po/p/Makefile', '/tmp/tmpzscnx6po/p/Makefile.test']
 Trying to build project using make
 make xv6.img fs.img
-/tmp/tmpnrjs_nm5/p/Makefile
-/tmp/tmpnrjs_nm5/p/Makefile.test
+/tmp/tmpzscnx6po/p/Makefile
+/tmp/tmpzscnx6po/p/Makefile.test
 make: 'xv6.img' is up to date.
 make: 'fs.img' is up to date.
 make qemu-nox CPUS=1
@@ -366,11 +367,11 @@ Remaps an anonymous mapping that requires moving and unmaps it
 
 **********************************************************************
 Running xv6 user progam /home/cs537-1/tests/P4/5_wremap_tests/test_35.c
-DEBUG: cmd = ['/home/cs537-1/tests/P4/edit-makefile.sh', '/tmp/tmpnrjs_nm5/p/Makefile', '/tmp/tmpnrjs_nm5/p/Makefile.test']
+DEBUG: cmd = ['/home/cs537-1/tests/P4/edit-makefile.sh', '/tmp/tmpzscnx6po/p/Makefile', '/tmp/tmpzscnx6po/p/Makefile.test']
 Trying to build project using make
 make xv6.img fs.img
-/tmp/tmpnrjs_nm5/p/Makefile
-/tmp/tmpnrjs_nm5/p/Makefile.test
+/tmp/tmpzscnx6po/p/Makefile
+/tmp/tmpzscnx6po/p/Makefile.test
 make: 'xv6.img' is up to date.
 make: 'fs.img' is up to date.
 make qemu-nox CPUS=1
@@ -429,11 +430,11 @@ Remap an file-backed mapping
 
 **********************************************************************
 Running xv6 user progam /home/cs537-1/tests/P4/5_wremap_tests/test_36.c
-DEBUG: cmd = ['/home/cs537-1/tests/P4/edit-makefile.sh', '/tmp/tmpnrjs_nm5/p/Makefile', '/tmp/tmpnrjs_nm5/p/Makefile.test']
+DEBUG: cmd = ['/home/cs537-1/tests/P4/edit-makefile.sh', '/tmp/tmpzscnx6po/p/Makefile', '/tmp/tmpzscnx6po/p/Makefile.test']
 Trying to build project using make
 make xv6.img fs.img
-/tmp/tmpnrjs_nm5/p/Makefile
-/tmp/tmpnrjs_nm5/p/Makefile.test
+/tmp/tmpzscnx6po/p/Makefile
+/tmp/tmpzscnx6po/p/Makefile.test
 make: 'xv6.img' is up to date.
 make: 'fs.img' is up to date.
 make qemu-nox CPUS=1

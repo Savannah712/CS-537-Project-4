@@ -38,16 +38,17 @@ int find_addr(int length) {
     int new_PageNum = (length % PGSIZE == 0) ? (length / PGSIZE) : ((length / PGSIZE) + 1);
     int temp = 0;
     int lower_bound = 0x60000000;
+    int upper_bound = 0;
     int overlap = 0;
-    while (count < 131072) {
+    while ((count < 131072) && (upper_bound <= KERNBASE)) {
         // if (count == 15) temp++;
         // int lower_bound = 0x60000000 + (PGSIZE * count);
 
-        int upper_bound = lower_bound + (PGSIZE * new_PageNum);
+        upper_bound = lower_bound + (PGSIZE * new_PageNum);
+        // new_num_pages
 
         while (temp < MAX_WMMAP_INFO) {
           if (myproc()->vld_map[temp] == 1) {
-
               // Check if there's an existing mapping
               int temp_length = myproc()->length[temp];
               int temp_PageNum = (temp_length % PGSIZE == 0) ? (temp_length / PGSIZE) : ((temp_length / PGSIZE) + 1);
@@ -116,8 +117,6 @@ int fill_table(int currAddr) {
 
     int index;
     index = find_index(currAddr);
-    // cprintf("here!\n");
-    // cprintf("Addr: %x, i here %d\n",  currAddr, index);
     if (index == FAILED) return FAILED;
     int offset = currAddr - myproc()->addr[index];
     int fd = myproc()->fd[index];
@@ -131,12 +130,14 @@ int fill_table(int currAddr) {
 
       pte = walkpgdir(myproc()->pgdir, (char*)PGROUNDDOWN((uint)currAddr), 1);
       if (*pte & PTE_P) return FAILED;
-      // cprintf("what about here?!, this is addr %x\n", currAddr);
 
 
       mem = kalloc();
       memset(mem, 0, PGSIZE);
       mappages(myproc()->pgdir, (void*)currAddr, 4096, V2P(mem), PTE_W | PTE_U);
+        // cprintf("remapped PTE: %x vs PTE %x\n", P2V(pa), va);
+      // cprintf("PTE ADDR is= %d, PTE is %d\n", PTE_ADDR(*pte), *pte);
+
       if(upage != MAX_UPAGE_INFO) {
       myproc()->va[upage] = currAddr;
       myproc()->pa[upage] = V2P(mem);
@@ -145,7 +146,6 @@ int fill_table(int currAddr) {
       
 
       if ((flags & MAP_ANONYMOUS) == 0) { 
-        // cprintf("this is the fd %x, flags are %x\n", fd,flags);
         // Read the file into memory
         struct file *f = myproc()->ofile[fd];
         changeOffset(f, offset );
@@ -175,7 +175,6 @@ int map(int addr, int length, int flags, int fd) {
     } else {
       if (check_overlap(addr, temp_length) == 1) return FAILED;
     }
-    // cprintf("passed fd is: %x, flags are %x\n", fd,flags);
     myproc()->total_mmaps++;
     int i = 0;
     while (myproc()->vld_map[i] == 1) {
@@ -203,73 +202,88 @@ int shrink(int addr) {
 
 }
 
-// int grow_unmap(int addr, int new_size, int index) {
+void remap_virtual_address(uint va, uint new_va) {
+  pde_t *pgdir = myproc()->pgdir;
+
+  pte_t *pte = walkpgdir(pgdir, (void *)va, 0); // Don't allocate new pages if not found
+  // uint pa = PTE_ADDR(*pte);
+  if (pte == 0)
+      panic("remap_virtual_address: no existing mapping");
+
+    // cprintf("REMAP: PTE ADDR is= %d, PTE is %d\n", PTE_ADDR(*pte), *pte);
+    // Map the new virtual address to the same physical address with the desired permissions
+    mappages(pgdir, (void *)new_va, PGSIZE, PTE_ADDR(*pte), PTE_W | PTE_U);
+    *pte = 0;
+
+
+    // Invalidate TLB for old virtual address
+    // tlbflush(); // You may need to flush TLB depending on your system
+}
+
+int is_allocated_virtual_address(uint va) {
+    pde_t *pgdir = myproc()->pgdir;
+    pte_t *pte = walkpgdir(pgdir, (void *)va, 0); // Don't allocate new pages if not found
+    return (pte != 0);
+}
+
+int grow_unmap(int addr, int new_size, int index) {
   
-//   int old_length = myproc()->length[index];
-//   int currAddr = find_addr(new_size);
-//   myproc()->length[index] = new_size;
-//   myproc()->addr[index] = new_addr;
+  // int new_addr;
+  // int old_length = myproc()->length[index];
+  // int currAddr = find_addr(new_size);
+  int new_addr = find_addr(new_size);
+  int currVA = new_addr;
+  // int oldVA;
 
 
-  
-//     if ((addr % 4096 != 0) || (addr < 0x60000000))
-//       return FAILED; 
 
-//     int found = 0;
-//     int i = 0;
-//     int fd = 0;
-//     int length;
-//     int flags = 0;
-//     struct file *f;
+    if ((addr % 4096 != 0) || (addr < 0x60000000))
+      return FAILED; 
 
-//     int pages = 0;
+    int found = 0;
+    // int i = 0;
+    // int fd = 0;
+    int length;
+    // int flags = 0;
+    // struct file *f;
+
+    int pages = 0;
     
-//     length = myproc()->length[i];
-//     flags = myproc()->flags[i];
-//     fd = myproc()->fd[i];
-//     pages = (length % 4096 != 0) ? (length / 4096 + 1) : (length / 4096);
-//     found = 0;
-//     i = 0;
+    length = myproc()->length[index];
+    // flags = myproc()->flags[i];
+    // fd = myproc()->fd[i];
+    pages = (length % 4096 != 0) ? (length / 4096 + 1) : (length / 4096);
+    found = 0;
+    int i = 0;
 
-//     while ((found == 0) && (i < MAX_UPAGE_INFO)) {
-//       if ((myproc()->vld_pge[i] == 1) && myproc()->va[i] == addr) {
-//         found = 1;
-//         currAddr = myproc()->va[i];
+    while ((found == 0) && (i < MAX_UPAGE_INFO)) {
+      // if ((myproc()->vld_pge[i] == 1) && (myproc()->va[i] == addr)) {
+      if (is_allocated_virtual_address(addr) != 0) {
 
-//               if ((flags & MAP_SHARED) != 0) {
-//                 // Write the modified contents back to the file
-//                 f = myproc()->ofile[fd];
-//                 changeOffset(f, 0);
-                
-//               }
+        found = 1;
+        int oldVA = addr;
 
+        for (int j = 0; j < pages; j++) {
+            // myproc()->vld_pge[i] = 0;
+            // myproc()->n_upages--;
+            // pte_t *pte = walkpgdir(myproc()->pgdir, (char*)PGROUNDDOWN((uint)currAddr), 0);
+            // uint pa = PTE_ADDR(*pte);
+            // *pte = 0;
+            // kfree(P2V(pa));
+            remap_virtual_address(oldVA,currVA);
 
-//         for (int j = 0; j < pages; j++) {
+            currVA += PGSIZE;
+            oldVA += PGSIZE;
+        }
+      }
+      i++;
+    }
 
+    myproc()->length[index] = new_size;
+    myproc()->addr[index] = new_addr;
 
-//             if ((flags & MAP_SHARED) != 0) {
-//                 // Write the modified contents back to the file
-//                 // f = myproc()->ofile[fd];
-//                 filewrite(f, (void*)currAddr, 4096);
-                
-//               }
-
-//             myproc()->vld_pge[i] = 0;
-//             myproc()->n_upages--;
-//             pte_t *pte = walkpgdir(myproc()->pgdir, (char*)PGROUNDDOWN((uint)currAddr), 0);
-//             uint pa = PTE_ADDR(*pte);
-//             *pte = 0;
-//             kfree(P2V(pa));
-
-//           currAddr = currAddr + 4096;
-//         }
-//       }
-//       i++;
-//     }
-
-
-//     return SUCCESS;
-// }
+    return new_addr;
+}
 
 int unmap (int addr) {
   
@@ -289,7 +303,7 @@ int unmap (int addr) {
     int flags = 0;
     struct file *f;
 
-    int pages = 0;
+      int pages = 0;
     while ((found == 0) && (i < MAX_WMMAP_INFO)) {
       if ((myproc()->vld_map[i] == 1) && myproc()->addr[i] == addr) {
         // cprintf("here!!\n");
@@ -307,10 +321,9 @@ int unmap (int addr) {
 
     while ((found == 0) && (i < MAX_UPAGE_INFO)) {
 
-      if ((myproc()->vld_pge[i] == 1) && myproc()->va[i] == addr) {
+      if (is_allocated_virtual_address(addr) == 1) {
         found = 1;
-        currAddr = myproc()->va[i];
-
+        currAddr = addr;
               if ((flags & MAP_SHARED) != 0) {
                 // Write the modified contents back to the file
                 
@@ -318,7 +331,6 @@ int unmap (int addr) {
                 changeOffset(f, 0);
                 
               }
-
 
         for (int j = 0; j < pages; j++) {
 
@@ -335,13 +347,14 @@ int unmap (int addr) {
             pte_t *pte = walkpgdir(myproc()->pgdir, (char*)PGROUNDDOWN((uint)currAddr), 0);
             uint pa = PTE_ADDR(*pte);
             *pte = 0;
-            kfree(P2V(pa));
+            if ((*pte & PTE_P)) kfree(P2V(pa));
 
           currAddr = currAddr + 4096;
         }
       }
       i++;
     }
+
 
 
     return SUCCESS;
@@ -383,7 +396,9 @@ int check_grow_in_place(int index, int newsize) {
       temp_lower_bound = myproc()->addr[i];
       temp_upper_bound = temp_lower_bound + (PGSIZE * temp_PageNum);
 
-      if ((new_upperbound > temp_lower_bound) && (new_upperbound <= temp_upper_bound)) return 0;
+
+      if (((new_upperbound > temp_lower_bound) && (new_upperbound <= temp_upper_bound)) ||
+          ((new_upperbound > temp_upper_bound) && (addr < temp_upper_bound))) return 0;
     }
 
   }
@@ -403,20 +418,29 @@ int remap(int oldaddr, int oldsize, int newsize, int flags) {
   int temp_length = myproc()->length[index];
   if ((temp_addr != oldaddr) || (temp_length != oldsize)) return FAILED;
 
+
+
 // REMAP IN PLACE!
   int old_num_pages = (oldsize % PGSIZE == 0) ? (oldsize / PGSIZE) : ((oldsize / PGSIZE) + 1);
   int new_num_pages = (newsize % PGSIZE == 0) ? (newsize / PGSIZE) : ((newsize / PGSIZE) + 1);
 
+  // cprintf("old addr: %x, new addr %x\n", oldaddr, temp_addr);
+  // cprintf("old size: %x, new size %x\n", oldsize, newsize);
+  // cprintf("old page: %x, new page %x\n", old_num_pages, new_num_pages);
+
+
   // same: SAME NUMBER OF PAGES!
   if (new_num_pages == old_num_pages) {
     myproc()->length[index] = newsize;
+
     return oldaddr;
   }
   // shrink: LESS PAGES
   else if (new_num_pages < old_num_pages) {
+
     for (int i = new_num_pages; i < old_num_pages ; i++) {
       int rm_addr = oldaddr + (PGSIZE * i);
-      // cprintf("address to remove %x\n", rm_addr);
+
       shrink(rm_addr);
     }
     myproc()->length[index] = newsize;
@@ -426,12 +450,13 @@ int remap(int oldaddr, int oldsize, int newsize, int flags) {
   else {
     // CHECK IF IT CAN GROW IN PLACE
     if (check_grow_in_place(index, newsize) == 1){
+
         myproc()->length[index] = newsize;
     // CANT? CHECK IF IT CAN MOVE
     } else if (flags == MREMAP_MAYMOVE) {
-      unmap(oldaddr);
-      return map(oldaddr,newsize,(myproc()->flags[index] & ~MAP_FIXED), myproc()->fd[index]);
-
+      // unmap(oldaddr);
+      // return map(oldaddr,newsize,(myproc()->flags[index] & ~MAP_FIXED), myproc()->fd[index]);
+      return grow_unmap(oldaddr, newsize, index);
     } else return FAILED;
   }
   
