@@ -218,15 +218,18 @@ return 0;
 int
 sys_wremap(void)
 {
-  return 0;
-    // int oldaddr;
-    // int oldsize;
-    // int newsize;
-    // int flags;
+  // return 0;
+    int oldaddr;
+    int oldsize;
+    int newsize;
+    int flags;
 
 
-    // if (argint(0, &oldaddr) < 0 || argint(1, &oldsize) < 0 || argint(2, &newsize) < 0 || argint(3, &flags) < 0)
-    //   return FAILED;
+    if (argint(0, &oldaddr) < 0 || argint(1, &oldsize) < 0 || argint(2, &newsize) < 0 || argint(3, &flags) < 0)
+      return FAILED;
+
+    return remap(oldaddr, oldsize, newsize, flags);
+
     
     // // FAIL if is not page aligned 
     // if (((oldaddr % 4096) != 0) && (oldaddr < 0x60000000)) 
@@ -344,22 +347,7 @@ sys_getpgdirinfo(void)
     return 0;
 }
 
-int unmap_all() {
-  pte_t *pte;
-  pde_t *pgdir = myproc()->pgdir;
-      for (uint va = 0; va < KERNBASE; va += PGSIZE) {
-        pte = walkpgdir(pgdir, (void *)va, 0);
-        if (pte && (*pte & PTE_P) && (*pte & PTE_U)) {
-            // if (i < MAX_UPAGE_INFO) {
-            //     i++;
-            // }
-            unmap(va);
-        }
-    }
 
-    return 0;
-
-}
 
 int
 sys_getwmapinfo(void)

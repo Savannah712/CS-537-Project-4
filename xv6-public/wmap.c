@@ -1,12 +1,13 @@
 #include "types.h"
-#include "x86.h"
 #include "defs.h"
-#include "date.h"
 #include "param.h"
 #include "memlayout.h"
 #include "mmu.h"
+#include "x86.h"
 #include "proc.h"
+#include "spinlock.h"
 #include "wmap.h"
+
 // #include "file.h"
 
 int check_overlap(int addr, int length) {
@@ -115,6 +116,7 @@ int fill_table(int currAddr) {
 
     int index;
     index = find_index(currAddr);
+    // cprintf("here!\n");
     // cprintf("Addr: %x, i here %d\n",  currAddr, index);
     if (index == FAILED) return FAILED;
     int offset = currAddr - myproc()->addr[index];
@@ -127,10 +129,10 @@ int fill_table(int currAddr) {
       upage++;
     }
 
-    // for (int i = 0; i < pages; i++) {
       pte = walkpgdir(myproc()->pgdir, (char*)PGROUNDDOWN((uint)currAddr), 1);
       if (*pte & PTE_P) return FAILED;
-      // if (check_overlap(currAddr, length)) return FAILED;
+      // cprintf("what about here?!, this is addr %x\n", currAddr);
+
 
       mem = kalloc();
       memset(mem, 0, PGSIZE);
@@ -143,7 +145,7 @@ int fill_table(int currAddr) {
       
 
       if ((flags & MAP_ANONYMOUS) == 0) { 
-        // cprintf("curr offset %d\n",offset);
+        // cprintf("this is the fd %x, flags are %x\n", fd,flags);
         // Read the file into memory
         struct file *f = myproc()->ofile[fd];
         changeOffset(f, offset );
@@ -151,7 +153,6 @@ int fill_table(int currAddr) {
       } 
       currAddr = currAddr + 4096;
       myproc()->n_loaded_pages[index]++;
-    // }
 
   return SUCCESS;
 }
@@ -174,7 +175,7 @@ int map(int addr, int length, int flags, int fd) {
     } else {
       if (check_overlap(addr, temp_length) == 1) return FAILED;
     }
-
+    // cprintf("passed fd is: %x, flags are %x\n", fd,flags);
     myproc()->total_mmaps++;
     int i = 0;
     while (myproc()->vld_map[i] == 1) {
@@ -185,15 +186,90 @@ int map(int addr, int length, int flags, int fd) {
     myproc()->fd[i] = fd;
     myproc()->vld_map[i] = 1;
     myproc()->length[i] = length;
-    
-    // myproc()->n_upages = myproc()->n_upages + iterations;
-
-    // Return the mapped address
 
     return currAddr;
 }
 
+int shrink(int addr) {
 
+    pte_t *pte = walkpgdir(myproc()->pgdir, (char*)PGROUNDDOWN((uint)addr), 0);
+    uint pa = PTE_ADDR(*pte);
+
+    if ((*pte & PTE_P)) kfree(P2V(pa));
+    *pte = 0;
+    myproc()->n_loaded_pages[find_index(addr)]--;
+
+    return SUCCESS;
+
+}
+
+// int grow_unmap(int addr, int new_size, int index) {
+  
+//   int old_length = myproc()->length[index];
+//   int currAddr = find_addr(new_size);
+//   myproc()->length[index] = new_size;
+//   myproc()->addr[index] = new_addr;
+
+
+  
+//     if ((addr % 4096 != 0) || (addr < 0x60000000))
+//       return FAILED; 
+
+//     int found = 0;
+//     int i = 0;
+//     int fd = 0;
+//     int length;
+//     int flags = 0;
+//     struct file *f;
+
+//     int pages = 0;
+    
+//     length = myproc()->length[i];
+//     flags = myproc()->flags[i];
+//     fd = myproc()->fd[i];
+//     pages = (length % 4096 != 0) ? (length / 4096 + 1) : (length / 4096);
+//     found = 0;
+//     i = 0;
+
+//     while ((found == 0) && (i < MAX_UPAGE_INFO)) {
+//       if ((myproc()->vld_pge[i] == 1) && myproc()->va[i] == addr) {
+//         found = 1;
+//         currAddr = myproc()->va[i];
+
+//               if ((flags & MAP_SHARED) != 0) {
+//                 // Write the modified contents back to the file
+//                 f = myproc()->ofile[fd];
+//                 changeOffset(f, 0);
+                
+//               }
+
+
+//         for (int j = 0; j < pages; j++) {
+
+
+//             if ((flags & MAP_SHARED) != 0) {
+//                 // Write the modified contents back to the file
+//                 // f = myproc()->ofile[fd];
+//                 filewrite(f, (void*)currAddr, 4096);
+                
+//               }
+
+//             myproc()->vld_pge[i] = 0;
+//             myproc()->n_upages--;
+//             pte_t *pte = walkpgdir(myproc()->pgdir, (char*)PGROUNDDOWN((uint)currAddr), 0);
+//             uint pa = PTE_ADDR(*pte);
+//             *pte = 0;
+//             kfree(P2V(pa));
+
+//           currAddr = currAddr + 4096;
+//         }
+//       }
+//       i++;
+//     }
+
+
+//     return SUCCESS;
+// }
 
 int unmap (int addr) {
   
@@ -216,6 +292,7 @@ int unmap (int addr) {
     int pages = 0;
     while ((found == 0) && (i < MAX_WMMAP_INFO)) {
       if ((myproc()->vld_map[i] == 1) && myproc()->addr[i] == addr) {
+        // cprintf("here!!\n");
         found = 1;
         myproc()->vld_map[i] = 0;
         length = myproc()->length[i];
@@ -269,3 +346,130 @@ int unmap (int addr) {
 
     return SUCCESS;
 }
+
+
+int unmap_all(void) {
+  pte_t *pte;
+  pde_t *pgdir = myproc()->pgdir;
+      for (uint va = 0; va < KERNBASE; va += PGSIZE) {
+        pte = walkpgdir(pgdir, (void *)va, 0);
+        if (pte && (*pte & PTE_P) && (*pte & PTE_U)) {
+            // if (i < MAX_UPAGE_INFO) {
+            //     i++;
+            // }
+            unmap(va);
+        }
+    }
+
+    return 0;
+
+}
+
+int check_grow_in_place(int index, int newsize) {
+  int addr = myproc()->addr[index];
+  // int oldsize = myproc()->length[index];
+  int new_PageNum = (newsize % PGSIZE == 0) ? (newsize / PGSIZE) : ((newsize / PGSIZE) + 1);
+  int new_upperbound = addr + (PGSIZE * new_PageNum); 
+  int temp_lower_bound;
+  int temp_upper_bound;
+  int temp_length;
+  int temp_PageNum;
+  int can_grow = 1;
+
+  for (int i = 0; i < MAX_WMMAP_INFO; i++) {
+    if((i != index) && (myproc()->vld_map[i] == 1)) {
+      temp_length = myproc()->length[i];
+      temp_PageNum = (temp_length % PGSIZE == 0) ? (temp_length / PGSIZE) : ((temp_length / PGSIZE) + 1);
+      temp_lower_bound = myproc()->addr[i];
+      temp_upper_bound = temp_lower_bound + (PGSIZE * temp_PageNum);
+
+      if ((new_upperbound > temp_lower_bound) && (new_upperbound <= temp_upper_bound)) return 0;
+    }
+
+  }
+
+  return can_grow;
+}
+
+
+int remap(int oldaddr, int oldsize, int newsize, int flags) {
+
+  if (((oldaddr % 4096) != 0) && (oldaddr < 0x60000000)) 
+    return FAILED;
+  
+  int index = find_index(oldaddr);
+  if (index == FAILED) return FAILED;
+  int temp_addr = myproc()->addr[index];
+  int temp_length = myproc()->length[index];
+  if ((temp_addr != oldaddr) || (temp_length != oldsize)) return FAILED;
+
+// REMAP IN PLACE!
+  int old_num_pages = (oldsize % PGSIZE == 0) ? (oldsize / PGSIZE) : ((oldsize / PGSIZE) + 1);
+  int new_num_pages = (newsize % PGSIZE == 0) ? (newsize / PGSIZE) : ((newsize / PGSIZE) + 1);
+
+  // same: SAME NUMBER OF PAGES!
+  if (new_num_pages == old_num_pages) {
+    myproc()->length[index] = newsize;
+    return oldaddr;
+  }
+  // shrink: LESS PAGES
+  else if (new_num_pages < old_num_pages) {
+    for (int i = new_num_pages; i < old_num_pages ; i++) {
+      int rm_addr = oldaddr + (PGSIZE * i);
+      // cprintf("address to remove %x\n", rm_addr);
+      shrink(rm_addr);
+    }
+    myproc()->length[index] = newsize;
+    return oldaddr;
+  } 
+  // grow: MORE PAGES
+  else {
+    // CHECK IF IT CAN GROW IN PLACE
+    if (check_grow_in_place(index, newsize) == 1){
+        myproc()->length[index] = newsize;
+    // CANT? CHECK IF IT CAN MOVE
+    } else if (flags == MREMAP_MAYMOVE) {
+      unmap(oldaddr);
+      return map(oldaddr,newsize,(myproc()->flags[index] & ~MAP_FIXED), myproc()->fd[index]);
+
+    } else return FAILED;
+  }
+  
+  return oldaddr;
+
+
+}
+
+
+// #include "types.h"
+// #include "defs.h"
+// #include "param.h"
+// #include "memlayout.h"
+// #include "mmu.h"
+// #include "proc.h"
+
+// // Helper function to copy memory mappings from parent to child
+// int copy_mmaps(struct proc *parent, struct proc *child) {
+//     // Iterate over the memory mappings in the parent process
+//     for (int i = 0; i < MAX_WMMAP_INFO; i++) {
+//         // Check if the parent process has a memory mapping at this index
+//         if (parent->addr[i] == 0)
+//             continue; // No memory mapping at this index, skip to next
+        
+//         // Allocate new pages for the child process
+//         char *new_mem = kalloc();
+//         if (new_mem == 0)
+//             return -1; // Failed to allocate memory
+        
+//         // Copy data from parent's memory mapping to the new pages
+//         memmove(new_mem, (char *)parent->mmaps[i].addr, parent->mmaps[i].len);
+        
+//         // Map the new pages to the child process's address space
+//         if (mappages(child->pgdir, (void *)parent->mmaps[i].addr, parent->mmaps[i].len, V2P(new_mem), PTE_W|PTE_U) < 0) {
+//             kfree(new_mem);
+//             return -1; // Failed to map pages to child process
+//         }
+//     }
+    
+//     return 0; // Success
+// }

@@ -195,6 +195,10 @@ int find_addr(int length);
 int fill_table(int currAddr);
 int map(int addr, int length, int flags, int fd);
 int unmap(int addr);
+int unmap_all(void);
+int find_index(int addr);
+int remap(int oldaddr, int oldsize, int newsize, int flags);
+
 
 
 // number of elements in fixed-size array
