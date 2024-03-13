@@ -1,4 +1,4 @@
-Names: Jo ALshwaish, Savannah Ahnen
+Names: Jo Alshwaish, Savannah Ahnen
 
 CS Logins: jo, savannah
 
