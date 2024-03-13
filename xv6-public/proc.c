@@ -47,9 +47,8 @@ uint getPA(struct proc *p, uint tempaddr, pte_t **pte) {
 // Copy mmaps from parent to child process
 int copy_maps(struct proc *parent, struct proc *child) {
   pte_t *pte;
-  child->isChild = 1;
   // int i = 0;
-
+  if (parent->total_mmaps == 0) return 0;
   for (int i = 0; i < MAX_WMMAP_INFO ; i++) {
     child->vld_map[i] = parent->vld_map[i]; 
     child->flags[i] = parent->flags[i]; 
@@ -58,6 +57,8 @@ int copy_maps(struct proc *parent, struct proc *child) {
     child->length[i] = parent->length[i]; 
     child->n_loaded_pages[i] = parent->n_loaded_pages[i]; 
     int isshared = (parent->flags[i] & 0x0002);
+    // cprintf("why are you here\n");
+    child->isChild = 1;
     // cprintf("child addr %x vs parent %x!\n", child->addr[i], parent->addr[i]);
 
     uint start = child->addr[i];
@@ -208,6 +209,7 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
+  // p->isParent = 1
 
 
   return p;
@@ -315,6 +317,7 @@ fork(void)
   // TODO: COPY WHAT WAS ADDED
   np->total_mmaps = curproc->total_mmaps;  
   if (copy_maps(curproc, np) == -1) return -1;  
+  // curproc->isChild = 0;
   // for (int i = 0; i < MAX_WMMAP_INFO ; i++) {
   //   np->vld_map[i] = curproc->vld_map[i]; 
   //   np->flags[i] = curproc->flags[i]; 

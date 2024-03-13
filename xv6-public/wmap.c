@@ -286,6 +286,7 @@ int grow_unmap(int addr, int new_size, int index) {
     return new_addr;
 }
 
+
 int unmap (int addr) {
   
     if ((addr % 4096 != 0) || (addr < 0x60000000))
@@ -325,24 +326,24 @@ int unmap (int addr) {
       if (is_allocated_virtual_address(addr) == 1) {
         found = 1;
         currAddr = addr;
-              if ((flags & MAP_SHARED) != 0) {
-                // Write the modified contents back to the file
+              // if (((flags & MAP_SHARED) != 0) && (myproc()->isChild != 1)) {
+              //   // Write the modified contents back to the file
                 
-                f = myproc()->ofile[fd];
-                changeOffset(f, 0);
+              //   f = myproc()->ofile[fd];
+              //   changeOffset(f, 0);
                 
-              }
-
+              // }
         for (int j = 0; j < pages; j++) {
-
-
-            if (((flags & MAP_SHARED) & (!myproc()->isChild)) != 0) {
+          // cprintf("test: %x\n", myproc()->isParent);
+          // if  {
+            if (((flags & MAP_SHARED) != 0) && (myproc()->isChild != 1)) {
+                f = myproc()->ofile[fd];
+                if (j == 0) changeOffset(f, 0);
                 // Write the modified contents back to the file
                 // f = myproc()->ofile[fd];
-                cprintf("here\n");
-                filewrite(f, (void*)currAddr, 4096);
-                
+                filewrite(f, (void*)currAddr, 4096); 
               }
+              // }
 
             myproc()->vld_pge[i] = 0;
             myproc()->n_upages--;
@@ -361,6 +362,82 @@ int unmap (int addr) {
 
     return SUCCESS;
 }
+
+// int unmap (int addr) {
+  
+//     if ((addr % 4096 != 0) || (addr < 0x60000000))
+//       return FAILED; 
+
+
+
+//     myproc()->total_mmaps--;
+
+//     int currAddr = addr;
+
+//     int found = 0;
+//     int i = 0;
+//     int fd = 0;
+//     int length;
+//     int flags = 0;
+//     struct file *f;
+
+//       int pages = 0;
+//     while ((found == 0) && (i < MAX_WMMAP_INFO)) {
+//       if ((myproc()->vld_map[i] == 1) && myproc()->addr[i] == addr) {
+//         // cprintf("here!!\n");
+//         found = 1;
+//         myproc()->vld_map[i] = 0;
+//         length = myproc()->length[i];
+//         flags = myproc()->flags[i];
+//         fd = myproc()->fd[i];
+//         pages = (length % 4096 != 0) ? (length / 4096 + 1) : (length / 4096);
+//       }
+//       i++;
+//     }
+//     found = 0;
+//     i = 0;
+
+//     while ((found == 0) && (i < MAX_UPAGE_INFO)) {
+
+//       if (is_allocated_virtual_address(addr) == 1) {
+//         found = 1;
+//         currAddr = addr;
+//               if ((flags & MAP_SHARED) != 0) {
+//                 // Write the modified contents back to the file
+                
+//                 f = myproc()->ofile[fd];
+//                 changeOffset(f, 0);
+                
+//               }
+
+//         for (int j = 0; j < pages; j++) {
+
+
+//             if (((flags & MAP_SHARED) & (!myproc()->isChild)) != 0) {
+//                 // Write the modified contents back to the file
+//                 // f = myproc()->ofile[fd];
+//                 cprintf("here\n");
+//                 filewrite(f, (void*)currAddr, 4096);
+                
+//               }
+
+//             myproc()->vld_pge[i] = 0;
+//             myproc()->n_upages--;
+//             pte_t *pte = walkpgdir(myproc()->pgdir, (char*)PGROUNDDOWN((uint)currAddr), 0);
+//             uint pa = PTE_ADDR(*pte);
+//             *pte = 0;
+//             if ((*pte & PTE_P)) kfree(P2V(pa));
+
+//           currAddr = currAddr + 4096;
+//         }
+//       }
+//       i++;
+//     }
+
+
+
+//     return SUCCESS;
+// }
 
 
 int unmap_all(void) {
