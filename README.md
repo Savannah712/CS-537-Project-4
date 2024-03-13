@@ -1,4 +1,4 @@
-Names: Jo ALshwaish, Savannah Ahnen
+Names: Jo ALshwaish, Savannah Ahnen\n
 CS Logins: jo, savannah
 Wisc IDs: alshwaish, sahnen
 Emails: alshwaish@wisc.edu, sahnen@wisc.edu
