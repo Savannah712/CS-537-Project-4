@@ -71,6 +71,7 @@ struct proc {
   int vld_pge[MAX_UPAGE_INFO];           // Starting address of mapping
   uint va[MAX_UPAGE_INFO]; // the virtual addresses of the allocated physical pages in the process's user address space
   uint pa[MAX_UPAGE_INFO]; // the physical addresses of the allocated physical pages in the process's user address space
+  int isChild;
 };
 
 

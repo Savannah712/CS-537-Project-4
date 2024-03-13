@@ -106,7 +106,10 @@ sys_wmap(void)
     if (argint(0, &addr) < 0 || argint(1, &length) < 0 || argint(2, &flags) < 0 || argint(3, &fd) < 0)
         return FAILED;
         
-    return map(addr, length, flags, fd);
+    addr = map(addr, length, flags, fd);
+
+
+    return addr;
 
   }
 
@@ -362,7 +365,9 @@ sys_getwmapinfo(void)
 
     // while ((currMap <= tot)) {
     for (int i = 0; i < MAX_WMMAP_INFO; i++) {
+          // cprintf("maps!, i is %d\n", i);
       if(myproc()->vld_map[i] == 1) {
+            // cprintf("maps! valid here!\n");
         wminfo->addr[currMap] = myproc()->addr[i];
         wminfo->length[currMap] = myproc()->length[i];
         wminfo->n_loaded_pages[currMap] = myproc()->n_loaded_pages[i];

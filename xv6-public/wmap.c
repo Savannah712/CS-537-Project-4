@@ -184,6 +184,7 @@ int map(int addr, int length, int flags, int fd) {
     myproc()->flags[i] = flags;
     myproc()->fd[i] = fd;
     myproc()->vld_map[i] = 1;
+    // cprintf("at index %d the map validity is %d which is address %x and length %x\n", i, myproc()->vld_map[i], myproc()->addr[i], myproc()->length[i]);
     myproc()->length[i] = length;
 
     return currAddr;
@@ -335,9 +336,10 @@ int unmap (int addr) {
         for (int j = 0; j < pages; j++) {
 
 
-            if ((flags & MAP_SHARED) != 0) {
+            if (((flags & MAP_SHARED) & (!myproc()->isChild)) != 0) {
                 // Write the modified contents back to the file
                 // f = myproc()->ofile[fd];
+                cprintf("here\n");
                 filewrite(f, (void*)currAddr, 4096);
                 
               }

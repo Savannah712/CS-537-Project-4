@@ -20,6 +20,103 @@ extern void trapret(void);
 
 static void wakeup1(void *chan);
 
+// int storedata(struct proc *p, int addr, int size, int flags,
+//                     int protection, struct file *f, int offset) {
+//   if (!(flags & 0x0004)) { // File backed mapping
+//     if (mapfilebacked(p, f, addr, protection, offset, size) == -1) {
+//       return -1;
+//     }
+//   } else { // Anonymous mapping
+//     if (mapanonymous(p, addr, protection, size) < 0) {
+//       return -1;
+//     }
+//   }
+//   return 0;
+// }
+
+// Get physical Address of page from virtual address of process
+uint getPA(struct proc *p, uint tempaddr, pte_t **pte) {
+  *pte = walkpgdir(p->pgdir, (char *)tempaddr, 0);
+  if (!*pte) {
+    return 0;
+  }
+  uint pa = PTE_ADDR(**pte);
+  return pa;
+}
+
+// Copy mmaps from parent to child process
+int copy_maps(struct proc *parent, struct proc *child) {
+  pte_t *pte;
+  child->isChild = 1;
+  // int i = 0;
+
+  for (int i = 0; i < MAX_WMMAP_INFO ; i++) {
+    child->vld_map[i] = parent->vld_map[i]; 
+    child->flags[i] = parent->flags[i]; 
+    child->fd[i] = parent->fd[i]; 
+    child->addr[i] = parent->addr[i]; 
+    child->length[i] = parent->length[i]; 
+    child->n_loaded_pages[i] = parent->n_loaded_pages[i]; 
+    int isshared = (parent->flags[i] & 0x0002);
+    // cprintf("child addr %x vs parent %x!\n", child->addr[i], parent->addr[i]);
+
+    uint start = child->addr[i];
+    uint virt_addr = start;
+    uint size = parent->length[i];
+    
+    for (; start < virt_addr + size; start += PGSIZE) {
+      uint pa = getPA(parent, start, &pte);
+      if (isshared) {
+        // If pa is zero then page is not allocated yet, allocate and continue
+        if (pa == 0) {
+          // int total_mmap_size =
+          //     parent->mmaps[i].size - parent->mmaps[i].stored_size;
+          // int size = PGSIZE > total_mmap_size ? total_mmap_size : PGSIZE;
+          // if (storedata(parent, start, size, parent->mmaps[i].flags,
+          //                     protection, parent->mmaps[i].f,
+          //                     parent->mmaps[i].offset) < 0) {
+          //   return -1;
+          // }
+          // parent->mmaps[i].stored_size += size;
+        }
+        pa = getPA(parent, start, &pte);
+        // If the page is shared and then all the data should be stored in page
+        // and mapped to each process
+        char *parentmem = (char *)P2V(pa);
+        if (mappages(child->pgdir, (void *)start, PGSIZE, V2P(parentmem),
+                     PTE_W | PTE_U) < 0) {
+          // ERROR: Shared mappages failed
+          cprintf("CopyMaps: mappages failed\n");
+        }
+      } else {
+        // If the mapping is private, lazy mapping can be done
+        if (pa == 0) {
+          continue;
+        }
+        char *mem = kalloc();
+        if (!mem) {
+          // ERROR: Private kalloc failed
+          return -1;
+        }
+        char *parentmem = (char *)P2V(pa);
+        memmove(mem, parentmem, PGSIZE);
+        if (mappages(child->pgdir, (void *)start, PGSIZE, V2P(mem),PTE_W | PTE_U)) {
+          // ERROR: Private mappages failed
+          return -1;
+        }
+      }
+    }
+    // copymmap(&child->mmaps[i], &parent->mmaps[i]);
+    if (isshared) {
+      // child->mmaps[i].ref_count = 1;
+    }
+  }
+  child->total_mmaps = parent->total_mmaps;
+  return 0;
+}
+
+
+
 void
 pinit(void)
 {
@@ -216,58 +313,59 @@ fork(void)
   acquire(&ptable.lock);
 
   // TODO: COPY WHAT WAS ADDED
-  np->total_mmaps = curproc->total_mmaps;    
-  for (int i = 0; i < MAX_WMMAP_INFO ; i++) {
-    np->vld_map[i] = curproc->vld_map[i]; 
-    np->flags[i] = curproc->flags[i]; 
-    np->fd[i] = curproc->fd[i]; 
-    np->addr[i] = curproc->addr[i]; 
-    np->length[i] = curproc->length[i]; 
-    np->n_loaded_pages[i] = curproc->n_loaded_pages[i]; 
-  }                
+  np->total_mmaps = curproc->total_mmaps;  
+  if (copy_maps(curproc, np) == -1) return -1;  
+  // for (int i = 0; i < MAX_WMMAP_INFO ; i++) {
+  //   np->vld_map[i] = curproc->vld_map[i]; 
+  //   np->flags[i] = curproc->flags[i]; 
+  //   np->fd[i] = curproc->fd[i]; 
+  //   np->addr[i] = curproc->addr[i]; 
+  //   np->length[i] = curproc->length[i]; 
+  //   np->n_loaded_pages[i] = curproc->n_loaded_pages[i]; 
+  // }                
 
-  np-> n_upages = curproc->n_upages; 
-  for (int i = 0; i < MAX_WMMAP_INFO ; i++) {
-    np->vld_pge[i] = curproc->vld_pge[i]; 
-    np->va[i] = curproc->va[i]; 
-    // np->pa[i] = curproc->pa[i]; 
-    if (np->vld_pge[i]) {
-      int currAddr = np->va[i];
-      pte_t *pte;
-      char * mem;
+  // np-> n_upages = curproc->n_upages; 
+  // for (int i = 0; i < MAX_WMMAP_INFO ; i++) {
+  //   np->vld_pge[i] = curproc->vld_pge[i]; 
+  //   np->va[i] = curproc->va[i]; 
+  //   // np->pa[i] = curproc->pa[i]; 
+  //   if (np->vld_pge[i]) {
+  //     int currAddr = np->va[i];
+  //     pte_t *pte;
+  //     char * mem;
 
-      int index;
-      index = find_index(currAddr);
-      int offset = currAddr - np->addr[index];
-      int fd = np->fd[index];
-      int flags = np->flags[index];
-      // int upage = 0;
-      // while ((myproc()->vld_pge[upage] == 1) && (upage < MAX_UPAGE_INFO)) {
-      //   upage++;
-      // }
+  //     int index;
+  //     index = find_index(currAddr);
+  //     int offset = currAddr - np->addr[index];
+  //     int fd = np->fd[index];
+  //     int flags = np->flags[index];
+  //     // int upage = 0;
+  //     // while ((myproc()->vld_pge[upage] == 1) && (upage < MAX_UPAGE_INFO)) {
+  //     //   upage++;
+  //     // }
 
-      pte = walkpgdir(np->pgdir, (char*)PGROUNDDOWN((uint)currAddr), 1);
-      if (*pte & PTE_P) break;
+  //     pte = walkpgdir(np->pgdir, (char*)PGROUNDDOWN((uint)currAddr), 1);
+  //     if (*pte & PTE_P) break;
 
-      mem = kalloc();
-      memset(mem, 0, PGSIZE);
-      mappages(np->pgdir, (void*)currAddr, 4096, V2P(mem), PTE_W | PTE_U);
-      if(i != MAX_UPAGE_INFO) {
-      np->pa[i] = V2P(mem);
-      np->vld_pge[i] = 1;
-      }
+  //     mem = kalloc();
+  //     memset(mem, 0, PGSIZE);
+  //     mappages(np->pgdir, (void*)currAddr, 4096, V2P(mem), PTE_W | PTE_U);
+  //     if(i != MAX_UPAGE_INFO) {
+  //     np->pa[i] = V2P(mem);
+  //     np->vld_pge[i] = 1;
+  //     }
       
 
-      if ((flags & 0x0004) == 0) { 
-        // Read the file into memory
-        struct file *f = np->ofile[fd];
-        changeOffset(f, offset );
-        fileread(f, (void*)currAddr, 4096);
-      } 
-      currAddr = currAddr + 4096;
-      }
-
-  }                   
+      // if ((flags & 0x0004) == 0) { 
+      //   // Read the file into memory
+      //   struct file *f = np->ofile[fd];
+      //   changeOffset(f, offset );
+      //   fileread(f, (void*)currAddr, 4096);
+      // } 
+      // currAddr = currAddr + 4096;
+      // }
+    
+  // }                   
 
   
   /////////////////////////
